@@ -1,0 +1,14 @@
+[project]
+name = "vibemodel"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "audiocloneserver",
+    "audiomessages",
+]
+
+[tool.uv.sources]
+audiomessages = { path = "../proto-packages/packages/audiomessages", editable = true }
+audiocloneserver = { path = "../proto-packages/packages/audiocloneserver", editable = true }
