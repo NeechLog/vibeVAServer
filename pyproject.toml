@@ -1,5 +1,5 @@
 [project]
-name = "vibemodel"
+name = "vibeVAServer"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -17,4 +17,4 @@ dependencies = [
 [tool.uv.sources]
 audiomessages = { path = "../packages/audiomessages", editable = true }
 audiocloneserver = { path = "../packages/audiocloneserver", editable = true }
-vibevoice = { git = "git+https://github.com/microsoft/VibeVoice.git" }
+vibevoice = { git = "git+https://github.com/vibevoice-community/VibeVoice.git"  }
