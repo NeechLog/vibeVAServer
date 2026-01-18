@@ -7,8 +7,14 @@ requires-python = ">=3.12"
 dependencies = [
     "audiocloneserver",
     "audiomessages",
+    "vibevoice",
+    "torch>=2.0.0",
+    "torchaudio",
+    "transformers",
+    "accelerate",
 ]
 
 [tool.uv.sources]
 audiomessages = { path = "../proto-packages/packages/audiomessages", editable = true }
 audiocloneserver = { path = "../proto-packages/packages/audiocloneserver", editable = true }
+vibevoice = { url = "git+https://github.com/microsoft/VibeVoice.git", editable = true }
