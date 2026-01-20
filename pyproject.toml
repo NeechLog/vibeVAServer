@@ -12,6 +12,7 @@ dependencies = [
     "torchaudio",
     "transformers",
     "accelerate",
+    "debugpy>=1.8.19",
 ]
 
 [tool.uv.sources]
