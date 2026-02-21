@@ -13,7 +13,7 @@ dependencies = [
     "transformers",
     "accelerate",
     "debugpy>=1.8.19",
-    librosa>=0.10.0",
+    "librosa>=0.10.0",
     "soundfile>=0.12.0",
     "numpy>=1.24.0",
 ]
