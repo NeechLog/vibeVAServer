@@ -8,6 +8,7 @@ import os
 import io
 import logging
 import time
+import argparse
 import torch
 import soundfile as sf
 import librosa
@@ -18,6 +19,7 @@ from vibevoice.processor.vibevoice_processor import VibeVoiceProcessor
 from audiocloneserver.grpc_server_launcher import start_grpc_server
 from audiocloneserver import clone_interface_pb2_grpc, clone_interface_pb2
 from audiocloneserver.server import AudioCloneModelWorkerServicer
+from audiocloneserver.stop_server import stop_server
 from audiomessages import audio_message_pb2
 from model_response_stats import collect_response_metadata, add_custom_model_info, get_system_resources, get_resource_delta
 
@@ -348,7 +350,7 @@ def clone_handler(request: clone_interface_pb2.CloneRequest, context) -> clone_i
         sample_audio_bytes = request.sample_audio_message.audio_binary
         sample_audio_path = request.sample_audio_message.audio_file_path
         
-        if sample_audio_path:
+        if sample_audio_path and os.path.exists(sample_audio_path):
             # Load audio from file path
             logger.info(f"Loading audio from file: {sample_audio_path}")
             voice_sample, _ = load_audio_from_file(sample_audio_path)
@@ -515,15 +517,63 @@ def stream_clone_handler(request_iterator, context):
 def main():
     """Main entry point for the VibeVoice AudioClone gRPC server."""
     
-    # Load configuration from environment
-    port = int(os.getenv("GRPC_PORT", "50051"))
-    workers = int(os.getenv("GRPC_WORKERS", "10"))
-    processes = int(os.getenv("GRPC_PROCESSES", "1"))
-    log_level = os.getenv("GRPC_LOG_LEVEL", "DEBUG")
-    #log_file = os.getenv("GRPC_LOG_FILE", "server.log")
-    daemon = os.getenv("GRPC_DAEMON", "false").lower() == "true"
-    pid_file = os.getenv("GRPC_PID_FILE", "audiocloneserver.pid")
-    max_message_size = int(os.getenv("GRPC_MAX_MESSAGE_SIZE_MB", "4"))
+    parser = argparse.ArgumentParser(description="VibeVoice AudioClone gRPC server")
+    subparsers = parser.add_subparsers(dest='command', help='Command to run')
+    
+    # Start command
+    start_parser = subparsers.add_parser('start', help='Start the VibeVAServer')
+    start_parser.add_argument("--port", type=int, default=50051, help="Port to listen on (default: 50051)")
+    start_parser.add_argument("--workers", type=int, default=10, help="Number of worker threads per process (default: 10)")
+    start_parser.add_argument("--processes", type=int, default=1, help="Number of processes to spawn (default: 1)")
+    start_parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Logging level (default: INFO)")
+    start_parser.add_argument("--log-file", default="vibevaserver.log", help="Path to log file (default: vibevaserver.log)")
+    start_parser.add_argument("--daemon", action="store_true", help="Run as daemon in background")
+    start_parser.add_argument("--pid-file", default="vibevaserver.pid", help="Path to PID file (default: vibevaserver.pid)")
+    start_parser.add_argument("--max-message-size", type=int, default=4, help="Max message size in MB (default: 4)")
+    
+    # Stop command
+    stop_parser = subparsers.add_parser('stop', help='Stop the VibeVAServer')
+    stop_parser.add_argument("--pid-file", default="vibevaserver.pid", help="Path to PID file (default: vibevaserver.pid)")
+    
+    args = parser.parse_args()
+    
+    # Handle stop command
+    if args.command == 'stop':
+        stop_server(args.pid_file)
+        return
+    
+    # Handle start command (default behavior for backward compatibility)
+    if args.command is None:
+        # For backward compatibility, treat as start if no subcommand provided
+        # Set default values for start command
+        port = 50051
+        workers = 10
+        processes = 1
+        log_level = "INFO"
+        log_file = "vibevaserver.log"
+        daemon = False
+        pid_file = "vibevaserver.pid"
+        max_message_size = 4
+    else:
+        # Use values from parsed arguments
+        port = args.port
+        workers = args.workers
+        processes = args.processes
+        log_level = args.log_level
+        log_file = args.log_file
+        daemon = args.daemon
+        pid_file = args.pid_file
+        max_message_size = args.max_message_size
+    
+    # Override with environment variables if set (for backward compatibility)
+    port = int(os.getenv("GRPC_PORT", str(port)))
+    workers = int(os.getenv("GRPC_WORKERS", str(workers)))
+    processes = int(os.getenv("GRPC_PROCESSES", str(processes)))
+    log_level = os.getenv("GRPC_LOG_LEVEL", log_level)
+    log_file = os.getenv("GRPC_LOG_FILE", log_file)
+    daemon = os.getenv("GRPC_DAEMON", str(daemon)).lower() == "true" or daemon
+    pid_file = os.getenv("GRPC_PID_FILE", pid_file)
+    max_message_size = int(os.getenv("GRPC_MAX_MESSAGE_SIZE_MB", str(max_message_size)))
     
     logger.info(f"Starting VibeVoice AudioClone gRPC server on port {port}")
     logger.info(f"Configuration: workers={workers}, processes={processes}, log_level={log_level}")
@@ -535,7 +585,7 @@ def main():
         max_workers=workers,
         num_processes=processes,
         log_level=log_level,
-        #log_file=log_file,
+        log_file=log_file,
         daemon=daemon,
         pid_file=pid_file,
         max_message_length_mb=max_message_size,
